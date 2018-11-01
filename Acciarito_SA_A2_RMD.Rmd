@@ -1,0 +1,169 @@
+---
+title: "Assignment 2 Analytics"
+author: "Sebastian Acciarito"
+date: "26/01/2017"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Documents/Sem 1 2017/Data visualisations/assignment 2")
+library(knitr)
+library(ggrepel)
+library(ade4)
+library(ggplot2)
+library(tree)
+library(rpart)
+```
+#Part A
+##Q1a
+```{r}
+pclus<-read.csv("proteinclus.csv")
+pclus
+plcusnum<-pclus[,c(2:10)]
+pcluS<-scale(plcusnum)
+#pcluS
+
+Pgrps=matrix(nrow=9,ncol=2)
+for(n in 2:10)
+{
+  Pgrpclus<-kmeans(pcluS, center=n, nstart=10)
+  Pgrps[n-1,1]=n
+  Pgrps[n-1,2]=Pgrpclus$betweenss/Pgrpclus$totss
+}
+
+Pgrps
+ 
+plot(Pgrps,type="b",main="Deviations Between Clusters", xlab="Number of Clusters", ylab="Percentage of deviance")
+```
+
+The shape of the above graph appears to follow a logrithimc curve, from 2 to 10. Following the elbow rule, we notice that the logarithimic curve levels out around 10 clusters. However given that the elbow rule ultimately depends on the amount of data available, the graph itself would suggest that the number of clusters that should be chosen ranges from 8 to 10. On this basis and as confirmed by the matrix, the optimal level of cluster should be chosen is 9 clusters.We could have chosen 10 but as the matrix suggests, the increase from 9 to 10 clusters is only a 2% increase in deviance.
+
+##Q1b
+```{r}
+proclus5<-kmeans(pcluS, center=5, nstart=10)
+proclus5
+proclus<-data.frame(pclus,cluster=factor(proclus5$cluster))
+proclus
+pclusord<-proclus[order(proclus$cluster),]
+pclusord[,c(1,11)]
+pclusmeans<-aggregate(pclus[,-c(1)],by=list(proclus$cluster), FUN=mean)
+pclusmeans
+RWF=proclus$RedMeat+proclus$WhiteMeat+proclus$Fish
+EM=proclus$Eggs+proclus$Milk
+CSNF=proclus$Cereals+proclus$Starch+proclus$Nuts+proclus$Fr.Veg
+grppclus<-data.frame(RWF,EM,CSNF,proclus$cluster,proclus$Country)
+grppclus
+grppclusmean<-aggregate(grppclus[,c(1,2,3)],by=list(proclus$cluster),FUN=mean)
+grppclusmean
+gpclus.df<-data.frame(proclus)
+
+#Graphs for Q1c
+#Figure 1
+ggplot(grppclus, aes(x=RWF, y=EM, color=proclus.cluster))+
+  geom_point(aes(color=proclus.cluster))+
+  geom_text_repel(aes(label=proclus$Country,color=proclus.cluster),size=3)+
+  labs(x="Meats and Fish", y="Eggs and Milk")+
+  ggtitle(subtitle="Figure 1", label = "Comparison of average protein consumption by cluster")
+
+#Figure 2
+ggplot(grppclus, aes(x=EM, y=CSNF,color=proclus.cluster))+
+  geom_point(aes(color=proclus.cluster))+
+  geom_text_repel(aes(label=proclus$Country, color=proclus.cluster),size=3)+
+  labs(title="Comparison of average protein consumption by cluster", x="Eggs and Milk", y="Grains and Fresh vegetables")+
+  ggtitle(subtitle="Figure 2", label = "Comparison of average protein consumption by cluster")
+
+#Figure 3  
+ggplot(grppclus, aes(x=RWF, y=CSNF, color=proclus.cluster))+
+  geom_point(aes(color=proclus.cluster))+
+  geom_text_repel(aes(label=proclus$Country,color=proclus.cluster),size=3)+
+  labs(title="Comparison of average protein consumption by cluster", x="Meats and Fish", y="Grains and Fresh vegetables")+
+  ggtitle(subtitle="Figure 3", label = "Comparison of average protein consumption by cluster")
+```
+
+###Discussion 1b & 1c
+Through analysis of the newly produced data frame, grppclus, combining the different variables into 3 distinct categories, Meat and Fish, Grains and Fresh Vegetables, and lastly Eggs and Milk, we begin to see very distinct clusters amongst the data.
+
+Firstly, in Figure 1 we see that that Cluster 2 consisting of such countries as Albania, Yugoslavia, Romania and Bulgaria, all appear to receive a very low percentage of protein from Eggs, Milk, Meat and Fish, which may coinside with the fact that these countries have a low GDP, suggesting that many of its citizens are perhaps unable to afford these products. Conversely in the upper right region of the graph, we find Cluster 5 consists of such countries as Switzerland, West Germany and Belgium; Whilst Cluster 1 consists of such countries as Sweden, Denmark and Norway. Countries in these Clusters all appear to recieve at least 20% of their protein from Eggs and Milk. This is interesting as these countries all have high GDP's and as such suggest that their citizens are able to afford to buy these products.
+
+If we look over at Figure 2, we see that Cluster 2 receives a low proportion of their protein from Eggs and milk, but receives a large percentage of protein from Grains and Fresh Vegetables. This illustration is quite interesting as it follows a similar trend exhibited in Figure 1, where cluster 2 also receives a low proportion of protein from Meats and Fish. However, unlike Figure 1, Figure 2 also illustrates that cluster 5 appears to receive equal portions of protein from Eggs and Milk, and Grains and Fresh vegetables. This infers that those countries in Cluster 5 have a more balanced and diet than those in Cluster 2.
+
+Moreover we find that Figure 3 reflects the trends portrayed in Figure 2, as we find that Cluster 2 appears to receive a large percentage of their protein from grains and vegetables. Yet if we look at the richer countries in Clusters 5 and 1, we find that they recieve almost equal percentages protein from Grains and Fresh Vegetables and Meat and Fish. Its also interesting to note that countires in Cluster 4 which can be categorized through their relationship with the former USSR, appear to vary in how much protein they recieve from the products. For example the USSR appears to receive a high percentage of protein from Grains and Fresh vegetables, yet East Germany appears to receive a large percentage of its proteins from Meat and Fish. Although in this case, East Germany would be considered as an anomaly, given the fact that historical records indicate that in 1973 East Germany suffered from extremely high infation due to the oil crisis of 1973.
+
+In regards to the clustering outcomes being explained by just the three variables listed in the grppclus table, it is difficult to conclude whether this is the case. We can see that the cluster themselves do give a realtively good insight into where different regions of Europe are receiving protein, there are certain clusters that appear very close together; ie Clusters 1 and 5. This would suggest that perhaps we could find more conclusive results by further increasing the amount of clusters available. However, further clustering the data may not provide any further insights, due to our small sample.
+
+#Part B
+##Q2a
+```{r}
+wine<-read.csv("wine.csv")
+#wine
+vec<-1:nrow(wine)
+set.seed(33)
+training<-sample(vec, nrow(wine)*0.7758)
+wine.training<-wine[training,]
+#wine.training
+test<-vec[-training]
+wine.test<-wine[test,]
+#wine.test
+```
+##Q2b & c
+```{r}
+#Q2b
+wine.training$Class<-factor(wine.training$Class, levels=c(1,2,3), labels=c("1","2","3"))
+str(wine.training)
+wine.tree<-tree(Class~., data=wine.training,mincut=1,minsize=2, method="class")
+wine.tree
+plot(wine.tree)
+text(wine.tree, cex=0.7,pretty=0)
+title('Classification Tree for Wine')
+
+#wine.predict<-predict(wine.tree, newdata=wine.train,type="class")
+#wine.predict
+#mean(wine.predict==wine.training$Class)
+
+#Q2C
+set.seed(33)
+cv_model<-cv.tree(wine.tree,FUN=prune.misclass,K=4)
+names(cv_model)
+cv_model
+plot(cv_model$size,cv_model$dev, type="b",main="Deviation vs Tree size", xlab="Number of leaves", ylab="Percentage of deviance")
+
+
+```
+
+###Discussion for 2c
+From the above graph, Deviation vs Tree size, we have decided to set our best value (number of tree leaves) to 5. The reason for this stems from the fact that from 5 to 7 leaves there is little improvement in the reduction of deviance. Hence to avoid overfitting the data, we have chosen to prune the tree to 5 leaves. 
+
+##Q2d
+```{r}
+#Q2d
+wine.pruned<-prune.tree(wine.tree, best=5, method="misclass")
+plot(wine.pruned)
+text(wine.pruned, cex=0.7, pretty=0)
+title('Pruned Classification Tree for Wine')
+wine.prunepred<-predict(wine.pruned, wine.test, type="class")
+wine.prunepred2<-predict(wine.pruned, wine.training, type="class")
+#wine.prunepred
+#wine.prunepred2
+#wine.test$Class
+
+print("Misclassification rate for test data")
+mean(wine.prunepred==wine.test$Class)
+print("Misclassification rate for training data")
+mean(wine.prunepred2==wine.training$Class)
+```
+
+##Q2e
+```{r}
+#wine
+centroid.wine<-lapply(wine[-1],FUN=mean)
+wine.predict3<-predict(wine.pruned,centroid.wine, type="class")
+centroid.wine
+wine.predict3
+```
+
+###Discussion for Q2c
+As we can see from the above output, our classification tree has suggested that the cetroid of the data set has been classified as being of the One variety. We can confirm this by the fact that our Flavanoids are greater than 1.45(2.02927), our proline is greater than 722.5(746.8933) and our colour is greater than 3.46(5.05809). 
